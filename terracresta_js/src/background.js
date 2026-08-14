@@ -1,4 +1,7 @@
-import { RAW_8X8_TILES } from './extracted_data.js';
+/**
+ * Terra Cresta - Procedural & Tilemap Vertical Scrolling Background
+ * Renders space stars, islands, planetary terrain, runway markings, and crater rings.
+ */
 
 export class Background {
   constructor() {
@@ -11,25 +14,25 @@ export class Background {
 
   initStars() {
     this.stars = [];
-    for (let i = 0; i < 45; i++) {
+    for (let i = 0; i < 60; i++) {
       this.stars.push({
         x: Math.random() * 256,
         y: Math.random() * 240,
-        speed: 0.5 + Math.random() * 1.5,
-        brightness: Math.random() > 0.5 ? '#ffffff' : '#00ffff'
+        speed: 0.4 + Math.random() * 1.6,
+        color: Math.random() > 0.6 ? '#ffff55' : (Math.random() > 0.3 ? '#44ffff' : '#ffffff')
       });
     }
   }
 
   initIslands() {
     this.islands = [
-      { x: 30, y: 40, w: 72, h: 104, tileIdx: 12, color: '#22aa22' },
-      { x: 150, y: -200, w: 88, h: 144, tileIdx: 18, color: '#aa7733' },
-      { x: 40, y: -550, w: 96, h: 160, tileIdx: 14, color: '#22aa22' },
-      { x: 130, y: -950, w: 104, h: 184, tileIdx: 24, color: '#0088cc' },
-      { x: 20, y: -1400, w: 120, h: 216, tileIdx: 18, color: '#aa7733' },
-      { x: 110, y: -1900, w: 112, h: 200, tileIdx: 12, color: '#22aa22' },
-      { x: 50, y: -2400, w: 152, h: 256, tileIdx: 30, color: '#cc44aa' } // Boss Base Island
+      { x: 24, y: 30, w: 80, h: 120, type: 'green', name: 'Alpha Base' },
+      { x: 140, y: -220, w: 90, h: 150, type: 'brown', name: 'Desert Ridge' },
+      { x: 30, y: -580, w: 100, h: 170, type: 'green', name: 'Beta Station' },
+      { x: 120, y: -1000, w: 110, h: 190, type: 'blue', name: 'Deep Sea Ring' },
+      { x: 20, y: -1450, w: 120, h: 220, type: 'brown', name: 'Volcanic Rift' },
+      { x: 100, y: -1950, w: 115, h: 210, type: 'green', name: 'Delta Base' },
+      { x: 40, y: -2500, w: 170, h: 280, type: 'boss', name: 'Mandler Core Island' }
     ];
   }
 
@@ -52,46 +55,63 @@ export class Background {
   }
 
   render(ctx) {
-    // 1. Deep Space Background
+    // 1. Deep Space Black
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, 256, 240);
 
-    // 2. Render Stars
+    // 2. Stars
     for (const s of this.stars) {
-      ctx.fillStyle = s.brightness;
+      ctx.fillStyle = s.color;
       ctx.fillRect(Math.floor(s.x), Math.floor(s.y), 1, 1);
     }
 
-    // 3. Render Terrain Islands with authentic 8x8 Disassembled Tiles
+    // 3. Terrain Islands
     for (const isl of this.islands) {
       if (isl.y + isl.h < 0 || isl.y > 240) continue;
 
-      const tile = RAW_8X8_TILES[isl.tileIdx % RAW_8X8_TILES.length];
-      const startX = Math.floor(isl.x);
-      const startY = Math.floor(isl.y);
-      ctx.fillStyle = isl.color;
+      const sx = Math.floor(isl.x);
+      const sy = Math.floor(isl.y);
 
-      for (let tx = 0; tx < isl.w; tx += 8) {
-        for (let ty = 0; ty < isl.h; ty += 8) {
-          const px = startX + tx;
-          const py = startY + ty;
-          if (py < -8 || py > 240) continue;
+      let mainColor = '#115511';
+      let edgeColor = '#33aa33';
+      let innerColor = '#0a3a0a';
 
-          // Blit authentic 8x8 tile
-          if (tile) {
-            for (let r = 0; r < 8; r++) {
-              const b = tile[r];
-              for (let bit = 7; bit >= 0; bit--) {
-                if (b & (1 << bit)) {
-                  ctx.fillRect(px + (7 - bit), py + r, 1, 1);
-                }
-              }
-            }
-          } else {
-            ctx.fillRect(px, py, 8, 8);
-          }
+      if (isl.type === 'brown') {
+        mainColor = '#664411';
+        edgeColor = '#aa7722';
+        innerColor = '#442a0a';
+      } else if (isl.type === 'blue') {
+        mainColor = '#114466';
+        edgeColor = '#2288cc';
+        innerColor = '#0a2a44';
+      } else if (isl.type === 'boss') {
+        mainColor = '#551155';
+        edgeColor = '#aa22aa';
+        innerColor = '#330833';
+      }
+
+      // Outer outline & island mass
+      ctx.fillStyle = edgeColor;
+      ctx.fillRect(sx, sy, isl.w, isl.h);
+
+      ctx.fillStyle = mainColor;
+      ctx.fillRect(sx + 3, sy + 3, isl.w - 6, isl.h - 6);
+
+      // Inner terrain detail
+      ctx.fillStyle = innerColor;
+      ctx.fillRect(sx + 8, sy + 8, isl.w - 16, isl.h - 16);
+
+      // Runway markings & crater grid
+      ctx.fillStyle = edgeColor;
+      for (let rx = sx + 16; rx < sx + isl.w - 12; rx += 20) {
+        for (let ry = sy + 16; ry < sy + isl.h - 12; ry += 20) {
+          ctx.fillRect(rx, ry, 3, 3);
         }
       }
+
+      // Base runway strip
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(sx + Math.floor(isl.w / 2) - 1, sy + 10, 2, isl.h - 20);
     }
   }
 }

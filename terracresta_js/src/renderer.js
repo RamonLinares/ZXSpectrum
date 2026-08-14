@@ -1,14 +1,14 @@
 /**
- * Terra Cresta - Canvas 2D Pixel Renderer
- * Draws player ships, module attachments, Phoenix flames, enemies, capsules, HUD, and CRT overlay.
+ * Terra Cresta - High-Performance Canvas 2D Pixel Renderer
+ * Renders authentic Winger fighter ships, modular docked configurations, Phoenix flames,
+ * tactical formation separation, swooping enemy waves, upgrade pods, and arcade HUD.
  */
 
 import {
-  SPRITE_PLAYER_1, SPRITE_MODULE_2, SPRITE_MODULE_3, SPRITE_MODULE_4, SPRITE_MODULE_5,
-  SPRITE_CAPSULE_CLOSED, SPRITE_CAPSULE_OPEN, SPRITE_ENEMY_SWOOP, SPRITE_ENEMY_SPINNER_1,
-  SPRITE_ENEMY_SPINNER_2, SPRITE_GROUND_TURRET, SPRITE_BOSS_CORE, PALETTE
+  SPRITE_WINGER, SPRITE_REGIO_2, SPRITE_GRUM_3, SPRITE_BETA_4, SPRITE_DELTA_5,
+  SPRITE_CAPSULE_CLOSED, SPRITE_CAPSULE_OPEN, SPRITE_SWOOPER, SPRITE_SPINNER_A,
+  SPRITE_SPINNER_B, SPRITE_TURRET, SPRITE_BOSS_MANDLER, PALETTE
 } from './sprites.js';
-import { RAW_16X16_SPRITES, RAW_8X8_TILES } from './extracted_data.js';
 
 export class Renderer {
   constructor(canvas) {
@@ -17,47 +17,9 @@ export class Renderer {
     this.ctx.imageSmoothingEnabled = false;
   }
 
-  // Draw authentic 16x16 masked sprite directly from disassembled Z80 binary memory
-  drawMaskedSprite(spriteObj, x, y, color) {
-    if (!spriteObj || !spriteObj.bytes) return;
-    const bytes = spriteObj.bytes;
-    const px = Math.floor(x);
-    const py = Math.floor(y);
-    const ctx = this.ctx;
-    ctx.fillStyle = color;
-
-    for (let line = 0; line < 16; line++) {
-      const d0 = bytes[line * 4 + 1];
-      const d1 = bytes[line * 4 + 3];
-      for (let b = 7; b >= 0; b--) {
-        if (d0 & (1 << b)) ctx.fillRect(px + (7 - b), py + line, 1, 1);
-      }
-      for (let b = 7; b >= 0; b--) {
-        if (d1 & (1 << b)) ctx.fillRect(px + 8 + (7 - b), py + line, 1, 1);
-      }
-    }
-  }
-
-  // Draw authentic 8x8 character or terrain tile directly from disassembled binary
-  drawTile8x8(tileBytes, x, y, color) {
-    if (!tileBytes) return;
-    const px = Math.floor(x);
-    const py = Math.floor(y);
-    const ctx = this.ctx;
-    ctx.fillStyle = color;
-
-    for (let r = 0; r < 8; r++) {
-      const b = tileBytes[r];
-      for (let bit = 7; bit >= 0; bit--) {
-        if (b & (1 << bit)) {
-          ctx.fillRect(px + (7 - bit), py + r, 1, 1);
-        }
-      }
-    }
-  }
-
-  // Draw a 2D boolean pixel matrix bitmap
+  // Draw 2D pixel boolean matrix bitmap with exact color
   drawBitmap(bitmap, x, y, color, scale = 1) {
+    if (!bitmap) return;
     this.ctx.fillStyle = color;
     const px = Math.floor(x);
     const py = Math.floor(y);
@@ -75,62 +37,60 @@ export class Renderer {
   render(game) {
     const ctx = this.ctx;
 
-    // 1. Draw Background
+    // 1. Draw Space & Island Terrain
     game.background.render(ctx);
 
-    // 2. Draw Capsules
+    // 2. Draw Upgrade Capsule Silos (2, 3, 4, 5)
     for (const cap of game.enemyManager.capsules) {
       if (cap.y < -30 || cap.y > 250) continue;
 
       if (!cap.isOpen) {
-        this.drawMaskedSprite(RAW_16X16_SPRITES[7] || RAW_16X16_SPRITES[0], cap.x, cap.y, PALETTE.BRIGHT_CYAN);
-        // Pod number
+        this.drawBitmap(SPRITE_CAPSULE_CLOSED, cap.x, cap.y, PALETTE.BRIGHT_CYAN);
+        // Number tag
         ctx.fillStyle = PALETTE.BRIGHT_YELLOW;
-        ctx.font = 'bold 9px monospace';
-        ctx.fillText(`(${cap.module})`, cap.x + 4, cap.y + 15);
+        ctx.font = 'bold 10px monospace';
+        ctx.fillText(`(${cap.module})`, cap.x + 3, cap.y + 13);
       } else if (!cap.isCollected) {
-        this.drawMaskedSprite(RAW_16X16_SPRITES[8] || RAW_16X16_SPRITES[0], cap.x, cap.y, PALETTE.BRIGHT_BLUE);
-        // Draw exposed module floating inside
-        this.drawModule(cap.module, cap.x + 4, cap.y + 5);
+        this.drawBitmap(SPRITE_CAPSULE_OPEN, cap.x, cap.y, PALETTE.BRIGHT_BLUE);
+        // Draw module hovering in silo
+        this.drawModule(cap.module, cap.x + 2, cap.y + 3);
       }
     }
 
-    // 3. Draw Enemies & Turrets
+    // 3. Draw Enemies & Ground Turrets
     for (const e of game.enemyManager.enemies) {
       if (e.type === 'swoop') {
-        this.drawMaskedSprite(RAW_16X16_SPRITES[9] || RAW_16X16_SPRITES[1], e.x, e.y, e.color || PALETTE.BRIGHT_RED);
+        this.drawBitmap(SPRITE_SWOOPER, e.x, e.y, e.color || PALETTE.BRIGHT_RED);
       } else if (e.type === 'spinner') {
-        const sprite = e.frame < 1 ? RAW_16X16_SPRITES[10] : RAW_16X16_SPRITES[11];
-        this.drawMaskedSprite(sprite || RAW_16X16_SPRITES[1], e.x, e.y, e.color || PALETTE.BRIGHT_CYAN);
+        const sprite = e.frame < 1 ? SPRITE_SPINNER_A : SPRITE_SPINNER_B;
+        this.drawBitmap(sprite, e.x, e.y, e.color || PALETTE.BRIGHT_CYAN);
       } else if (e.type === 'turret') {
-        this.drawMaskedSprite(RAW_16X16_SPRITES[12] || RAW_16X16_SPRITES[0], e.x, e.y, PALETTE.BRIGHT_YELLOW);
+        this.drawBitmap(SPRITE_TURRET, e.x, e.y, PALETTE.BRIGHT_YELLOW);
       } else if (e.type === 'bullet') {
         ctx.fillStyle = e.color || PALETTE.BRIGHT_RED;
         ctx.fillRect(Math.floor(e.x), Math.floor(e.y), e.width, e.height);
       }
     }
 
-    // 4. Draw Boss
+    // 4. Draw Mandler Core Boss
     if (game.enemyManager.boss) {
       const b = game.enemyManager.boss;
-      this.drawMaskedSprite(RAW_16X16_SPRITES[13] || RAW_16X16_SPRITES[1], b.x, b.y, PALETTE.BRIGHT_MAGENTA);
-      this.drawMaskedSprite(RAW_16X16_SPRITES[14] || RAW_16X16_SPRITES[1], b.x + 16, b.y, PALETTE.BRIGHT_MAGENTA);
-      this.drawMaskedSprite(RAW_16X16_SPRITES[15] || RAW_16X16_SPRITES[1], b.x + 32, b.y, PALETTE.BRIGHT_MAGENTA);
+      this.drawBitmap(SPRITE_BOSS_MANDLER, b.x, b.y, PALETTE.BRIGHT_MAGENTA);
 
-      // Flashing boss core
-      ctx.fillStyle = (Math.floor(Date.now() / 80) % 2 === 0) ? PALETTE.BRIGHT_RED : PALETTE.BRIGHT_YELLOW;
+      // Flashing Core Heart
+      ctx.fillStyle = (Math.floor(Date.now() / 70) % 2 === 0) ? PALETTE.BRIGHT_RED : PALETTE.BRIGHT_YELLOW;
       ctx.beginPath();
-      ctx.arc(b.x + 24, b.y + 22, 7, 0, Math.PI * 2);
+      ctx.arc(b.x + 18, b.y + 16, 6, 0, Math.PI * 2);
       ctx.fill();
 
       // Boss Health Bar
-      ctx.fillStyle = '#333333';
-      ctx.fillRect(b.x, b.y - 8, 48, 4);
+      ctx.fillStyle = '#222222';
+      ctx.fillRect(b.x - 4, b.y - 8, 44, 4);
       ctx.fillStyle = PALETTE.BRIGHT_GREEN;
-      ctx.fillRect(b.x, b.y - 8, Math.max(0, (b.health / b.maxHealth) * 48), 4);
+      ctx.fillRect(b.x - 4, b.y - 8, Math.max(0, (b.health / b.maxHealth) * 44), 4);
     }
 
-    // 5. Draw Player Bullets
+    // 5. Draw Player Laser Cannons & Plasma
     for (const b of game.player.bullets) {
       if (b.type === 'phoenix') {
         ctx.fillStyle = (Math.floor(Date.now() / 50) % 2 === 0) ? PALETTE.BRIGHT_YELLOW : PALETTE.ORANGE;
@@ -147,21 +107,20 @@ export class Renderer {
       }
     }
 
-    // 6. Draw Player Ship
+    // 6. Draw Player Winger Fighter & Modular Docking
     if (game.player.alive) {
-      // Blink when invulnerable
+      // Invulnerability blink
       if (game.player.invulnerableTimer <= 0 || Math.floor(game.player.invulnerableTimer / 4) % 2 === 0) {
         if (game.player.isPhoenix) {
-          // Draw Flaming Phoenix Aura
           this.drawPhoenix(game.player.x, game.player.y);
         } else if (game.player.isSplit) {
-          // Draw separated modules in diamond formation
+          // Separated Diamond Formation
           const positions = game.player.getModulePositions();
           for (const p of positions) {
             this.drawModule(p.module, p.x, p.y);
           }
 
-          // Draw energy beams connecting the split modules
+          // Tactical Energy Beams connecting the modules
           ctx.strokeStyle = (Math.floor(Date.now() / 60) % 2 === 0) ? PALETTE.BRIGHT_CYAN : PALETTE.BRIGHT_YELLOW;
           ctx.lineWidth = 1;
           ctx.setLineDash([3, 2]);
@@ -175,29 +134,29 @@ export class Renderer {
           ctx.stroke();
           ctx.setLineDash([]);
         } else {
-          // Draw fully assembled modular fighter
+          // Assembled Multi-Part Fighter
           this.drawAssembledShip(game.player);
         }
       }
     }
 
-    // 7. Draw Explosions / Particles
+    // 7. Explosions & Particle Bursts
     for (const p of game.enemyManager.particles) {
       ctx.fillStyle = p.color;
       ctx.fillRect(Math.floor(p.x), Math.floor(p.y), 2, 2);
     }
 
-    // 8. Draw Retro Arcade HUD
+    // 8. Arcade HUD (Score, High Score, Ships, Formations)
     this.renderHUD(game);
   }
 
   drawModule(num, x, y) {
     switch (num) {
-      case 1: this.drawMaskedSprite(RAW_16X16_SPRITES[1] || RAW_16X16_SPRITES[0], x, y, PALETTE.BRIGHT_WHITE); break;
-      case 2: this.drawMaskedSprite(RAW_16X16_SPRITES[3] || RAW_16X16_SPRITES[0], x, y, PALETTE.BRIGHT_YELLOW); break;
-      case 3: this.drawMaskedSprite(RAW_16X16_SPRITES[4] || RAW_16X16_SPRITES[0], x, y, PALETTE.BRIGHT_CYAN); break;
-      case 4: this.drawMaskedSprite(RAW_16X16_SPRITES[5] || RAW_16X16_SPRITES[0], x, y, PALETTE.BRIGHT_GREEN); break;
-      case 5: this.drawMaskedSprite(RAW_16X16_SPRITES[6] || RAW_16X16_SPRITES[0], x, y, PALETTE.BRIGHT_RED); break;
+      case 1: this.drawBitmap(SPRITE_WINGER, x, y, PALETTE.BRIGHT_WHITE); break;
+      case 2: this.drawBitmap(SPRITE_REGIO_2, x, y, PALETTE.BRIGHT_YELLOW); break;
+      case 3: this.drawBitmap(SPRITE_GRUM_3, x, y, PALETTE.BRIGHT_CYAN); break;
+      case 4: this.drawBitmap(SPRITE_BETA_4, x, y, PALETTE.BRIGHT_GREEN); break;
+      case 5: this.drawBitmap(SPRITE_DELTA_5, x, y, PALETTE.BRIGHT_RED); break;
     }
   }
 
@@ -205,14 +164,14 @@ export class Renderer {
     const x = player.x;
     const y = player.y;
 
-    // Layer attached modules from authentic disassembled sprites
-    if (player.modules.includes(5)) this.drawMaskedSprite(RAW_16X16_SPRITES[6], x, y + 4, PALETTE.BRIGHT_RED);
-    if (player.modules.includes(4)) this.drawMaskedSprite(RAW_16X16_SPRITES[5], x, y - 2, PALETTE.BRIGHT_GREEN);
-    if (player.modules.includes(3)) this.drawMaskedSprite(RAW_16X16_SPRITES[4], x, y + 6, PALETTE.BRIGHT_CYAN);
-    if (player.modules.includes(2)) this.drawMaskedSprite(RAW_16X16_SPRITES[3], x, y - 4, PALETTE.BRIGHT_YELLOW);
+    // Layer attached modules
+    if (player.modules.includes(5)) this.drawBitmap(SPRITE_DELTA_5, x, y + 4, PALETTE.BRIGHT_RED);
+    if (player.modules.includes(4)) this.drawBitmap(SPRITE_BETA_4, x, y - 2, PALETTE.BRIGHT_GREEN);
+    if (player.modules.includes(3)) this.drawBitmap(SPRITE_GRUM_3, x, y + 6, PALETTE.BRIGHT_CYAN);
+    if (player.modules.includes(2)) this.drawBitmap(SPRITE_REGIO_2, x, y - 4, PALETTE.BRIGHT_YELLOW);
 
-    // Main cockpit fighter
-    this.drawMaskedSprite(RAW_16X16_SPRITES[1] || RAW_16X16_SPRITES[0], x, y, PALETTE.BRIGHT_WHITE);
+    // Main Cockpit Fighter
+    this.drawBitmap(SPRITE_WINGER, x, y, PALETTE.BRIGHT_WHITE);
   }
 
   drawPhoenix(x, y) {
@@ -231,8 +190,7 @@ export class Renderer {
     ctx.closePath();
     ctx.fill();
 
-    // Central ship core
-    this.drawBitmap(SPRITE_PLAYER_1, x, y, PALETTE.BRIGHT_WHITE);
+    this.drawBitmap(SPRITE_WINGER, x, y, PALETTE.BRIGHT_WHITE);
   }
 
   renderHUD(game) {
@@ -240,23 +198,23 @@ export class Renderer {
     ctx.fillStyle = PALETTE.BRIGHT_YELLOW;
     ctx.font = '10px monospace';
 
-    // Top Header: 1UP, HIGH SCORE
-    ctx.fillText(`1UP: ${String(game.player.score).padStart(6, '0')}`, 10, 12);
-    ctx.fillText(`HIGH: ${String(game.highScore).padStart(6, '0')}`, 160, 12);
+    // 1UP, HIGH SCORE
+    ctx.fillText(`1UP: ${String(game.player.score).padStart(6, '0')}`, 10, 14);
+    ctx.fillText(`HIGH: ${String(game.highScore).padStart(6, '0')}`, 155, 14);
 
-    // Bottom Footer: Lives & Formation Status
+    // Bottom Status
     ctx.fillStyle = PALETTE.BRIGHT_WHITE;
     ctx.fillText(`SHIPS: ${'▲ '.repeat(Math.max(0, game.player.lives))}`, 10, 234);
 
     if (game.player.isPhoenix) {
       ctx.fillStyle = PALETTE.ORANGE;
-      ctx.fillText(`🔥 PHOENIX MODE (${Math.ceil(game.player.phoenixTimer / 60)}s)`, 110, 234);
+      ctx.fillText(`🔥 PHOENIX (${Math.ceil(game.player.phoenixTimer / 60)}s)`, 130, 234);
     } else if (game.player.isSplit) {
       ctx.fillStyle = PALETTE.BRIGHT_CYAN;
-      ctx.fillText(`⚡ FORMATION (${Math.ceil(game.player.splitTimer / 60)}s)`, 120, 234);
+      ctx.fillText(`⚡ SPLIT (${Math.ceil(game.player.splitTimer / 60)}s)`, 140, 234);
     } else if (game.player.modules.length > 1) {
       ctx.fillStyle = PALETTE.BRIGHT_GREEN;
-      ctx.fillText(`MODS: [${game.player.modules.join('-')}] (SHIFT: SPLIT)`, 90, 234);
+      ctx.fillText(`MODS: [${game.player.modules.join('-')}] (SHIFT: SPLIT)`, 80, 234);
     }
   }
 }
