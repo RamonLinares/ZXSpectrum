@@ -83,13 +83,13 @@ export class Renderer {
       if (cap.y < -30 || cap.y > 250) continue;
 
       if (!cap.isOpen) {
-        this.drawBitmap(SPRITE_CAPSULE_CLOSED, cap.x, cap.y, PALETTE.CYAN);
+        this.drawMaskedSprite(RAW_16X16_SPRITES[7] || RAW_16X16_SPRITES[0], cap.x, cap.y, PALETTE.BRIGHT_CYAN);
         // Pod number
         ctx.fillStyle = PALETTE.BRIGHT_YELLOW;
         ctx.font = 'bold 9px monospace';
         ctx.fillText(`(${cap.module})`, cap.x + 4, cap.y + 15);
       } else if (!cap.isCollected) {
-        this.drawBitmap(SPRITE_CAPSULE_OPEN, cap.x, cap.y, PALETTE.BRIGHT_BLUE);
+        this.drawMaskedSprite(RAW_16X16_SPRITES[8] || RAW_16X16_SPRITES[0], cap.x, cap.y, PALETTE.BRIGHT_BLUE);
         // Draw exposed module floating inside
         this.drawModule(cap.module, cap.x + 4, cap.y + 5);
       }
@@ -98,12 +98,12 @@ export class Renderer {
     // 3. Draw Enemies & Turrets
     for (const e of game.enemyManager.enemies) {
       if (e.type === 'swoop') {
-        this.drawBitmap(SPRITE_ENEMY_SWOOP, e.x, e.y, e.color || PALETTE.BRIGHT_RED);
+        this.drawMaskedSprite(RAW_16X16_SPRITES[9] || RAW_16X16_SPRITES[1], e.x, e.y, e.color || PALETTE.BRIGHT_RED);
       } else if (e.type === 'spinner') {
-        const sprite = e.frame < 1 ? SPRITE_ENEMY_SPINNER_1 : SPRITE_ENEMY_SPINNER_2;
-        this.drawBitmap(sprite, e.x, e.y, e.color || PALETTE.BRIGHT_CYAN);
+        const sprite = e.frame < 1 ? RAW_16X16_SPRITES[10] : RAW_16X16_SPRITES[11];
+        this.drawMaskedSprite(sprite || RAW_16X16_SPRITES[1], e.x, e.y, e.color || PALETTE.BRIGHT_CYAN);
       } else if (e.type === 'turret') {
-        this.drawBitmap(SPRITE_GROUND_TURRET, e.x, e.y, PALETTE.BRIGHT_YELLOW);
+        this.drawMaskedSprite(RAW_16X16_SPRITES[12] || RAW_16X16_SPRITES[0], e.x, e.y, PALETTE.BRIGHT_YELLOW);
       } else if (e.type === 'bullet') {
         ctx.fillStyle = e.color || PALETTE.BRIGHT_RED;
         ctx.fillRect(Math.floor(e.x), Math.floor(e.y), e.width, e.height);
@@ -113,7 +113,9 @@ export class Renderer {
     // 4. Draw Boss
     if (game.enemyManager.boss) {
       const b = game.enemyManager.boss;
-      this.drawBitmap(SPRITE_BOSS_CORE, b.x, b.y, PALETTE.BRIGHT_MAGENTA);
+      this.drawMaskedSprite(RAW_16X16_SPRITES[13] || RAW_16X16_SPRITES[1], b.x, b.y, PALETTE.BRIGHT_MAGENTA);
+      this.drawMaskedSprite(RAW_16X16_SPRITES[14] || RAW_16X16_SPRITES[1], b.x + 16, b.y, PALETTE.BRIGHT_MAGENTA);
+      this.drawMaskedSprite(RAW_16X16_SPRITES[15] || RAW_16X16_SPRITES[1], b.x + 32, b.y, PALETTE.BRIGHT_MAGENTA);
 
       // Flashing boss core
       ctx.fillStyle = (Math.floor(Date.now() / 80) % 2 === 0) ? PALETTE.BRIGHT_RED : PALETTE.BRIGHT_YELLOW;
@@ -191,11 +193,11 @@ export class Renderer {
 
   drawModule(num, x, y) {
     switch (num) {
-      case 1: this.drawBitmap(SPRITE_PLAYER_1, x, y, PALETTE.BRIGHT_WHITE); break;
-      case 2: this.drawBitmap(SPRITE_MODULE_2, x, y, PALETTE.BRIGHT_YELLOW); break;
-      case 3: this.drawBitmap(SPRITE_MODULE_3, x, y, PALETTE.BRIGHT_CYAN); break;
-      case 4: this.drawBitmap(SPRITE_MODULE_4, x, y, PALETTE.BRIGHT_GREEN); break;
-      case 5: this.drawBitmap(SPRITE_MODULE_5, x, y, PALETTE.BRIGHT_RED); break;
+      case 1: this.drawMaskedSprite(RAW_16X16_SPRITES[1] || RAW_16X16_SPRITES[0], x, y, PALETTE.BRIGHT_WHITE); break;
+      case 2: this.drawMaskedSprite(RAW_16X16_SPRITES[3] || RAW_16X16_SPRITES[0], x, y, PALETTE.BRIGHT_YELLOW); break;
+      case 3: this.drawMaskedSprite(RAW_16X16_SPRITES[4] || RAW_16X16_SPRITES[0], x, y, PALETTE.BRIGHT_CYAN); break;
+      case 4: this.drawMaskedSprite(RAW_16X16_SPRITES[5] || RAW_16X16_SPRITES[0], x, y, PALETTE.BRIGHT_GREEN); break;
+      case 5: this.drawMaskedSprite(RAW_16X16_SPRITES[6] || RAW_16X16_SPRITES[0], x, y, PALETTE.BRIGHT_RED); break;
     }
   }
 
@@ -203,14 +205,14 @@ export class Renderer {
     const x = player.x;
     const y = player.y;
 
-    // Layer attached modules
-    if (player.modules.includes(5)) this.drawBitmap(SPRITE_MODULE_5, x, y + 4, PALETTE.BRIGHT_RED);
-    if (player.modules.includes(4)) this.drawBitmap(SPRITE_MODULE_4, x, y - 2, PALETTE.BRIGHT_GREEN);
-    if (player.modules.includes(3)) this.drawBitmap(SPRITE_MODULE_3, x, y + 6, PALETTE.BRIGHT_CYAN);
-    if (player.modules.includes(2)) this.drawBitmap(SPRITE_MODULE_2, x, y - 4, PALETTE.BRIGHT_YELLOW);
+    // Layer attached modules from authentic disassembled sprites
+    if (player.modules.includes(5)) this.drawMaskedSprite(RAW_16X16_SPRITES[6], x, y + 4, PALETTE.BRIGHT_RED);
+    if (player.modules.includes(4)) this.drawMaskedSprite(RAW_16X16_SPRITES[5], x, y - 2, PALETTE.BRIGHT_GREEN);
+    if (player.modules.includes(3)) this.drawMaskedSprite(RAW_16X16_SPRITES[4], x, y + 6, PALETTE.BRIGHT_CYAN);
+    if (player.modules.includes(2)) this.drawMaskedSprite(RAW_16X16_SPRITES[3], x, y - 4, PALETTE.BRIGHT_YELLOW);
 
     // Main cockpit fighter
-    this.drawBitmap(SPRITE_PLAYER_1, x, y, PALETTE.BRIGHT_WHITE);
+    this.drawMaskedSprite(RAW_16X16_SPRITES[1] || RAW_16X16_SPRITES[0], x, y, PALETTE.BRIGHT_WHITE);
   }
 
   drawPhoenix(x, y) {
