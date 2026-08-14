@@ -1,0 +1,22 @@
+{
+  "name": "zx-spectrum-48k-emulator",
+  "version": "1.0.0",
+  "description": "Authentic Sinclair ZX Spectrum 48K Web Emulator with Z80 CPU, Web Audio beeper, virtual rubber keyboard, CRT shaders, and games library.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node test/verify_spectrum.js"
+  },
+  "keywords": [
+    "zx-spectrum",
+    "sinclair",
+    "z80",
+    "emulator",
+    "retro-computing",
+    "web-audio",
+    "canvas"
+  ],
+  "author": "Antigravity Pair Programmer",
+  "license": "MIT"
+}

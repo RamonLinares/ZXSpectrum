@@ -1,0 +1,42 @@
+# Operating System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Dependencies & Tooling
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.playwright-cli/
+
+# Copyrighted ROMs & Game Binaries (Must not be committed)
+*.rom
+*.ROM
+48k.rom
+roms/
+*.tap
+*.TAP
+*.tzx
+*.TZX
+*.sna
+*.SNA
+*.z80
+*.Z80
+*.szx
+*.SZX
+*.dsk
+*.DSK
+*.scr
+*.SCR
+src_rom_b64.txt
+boot_state.json
+src/boot_state.json
+manic_miner.sna
+
+# Logs
+*.log

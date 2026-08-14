@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZX Spectrum 48K Web Emulator</title>
+  <meta name="description" content="Authentic Sinclair ZX Spectrum 48K emulator running cycle-accurate Z80 CPU, Web Audio 1-bit beeper, CRT scanline shaders, and Sinclair rubber keyboard.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app-container" class="app-container">
+    <!-- Header / Brand Banner -->
+    <header class="sinclair-header">
+      <div class="brand-left">
+        <div class="sinclair-logo">
+          <span class="sinclair-word">sinclair</span>
+          <span class="spectrum-badge">ZX Spectrum<span class="ram-badge">48K</span></span>
+        </div>
+        <div class="rainbow-stripe">
+          <span class="stripe red"></span>
+          <span class="stripe yellow"></span>
+          <span class="stripe green"></span>
+          <span class="stripe cyan"></span>
+        </div>
+      </div>
+
+      <!-- Quick Nav Buttons -->
+      <nav class="header-nav">
+        <button id="btn-open-games" class="nav-btn"><span class="icon">🎮</span> Software Library</button>
+        <button id="btn-open-tape" class="nav-btn"><span class="icon">📼</span> Tape Deck</button>
+        <button id="btn-open-debugger" class="nav-btn"><span class="icon">⚙️</span> Z80 Debugger</button>
+        <button id="btn-open-basic" class="nav-btn"><span class="icon">📖</span> BASIC Manual</button>
+      </nav>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="main-layout">
+      <!-- Left / Center: The Spectrum Hardware Console -->
+      <section class="chassis-container">
+        <!-- CRT Monitor Bezel -->
+        <div class="crt-bezel">
+          <div class="screen-hud">
+            <div class="hud-left">
+              <span id="power-led" class="power-led on"></span>
+              <span class="hud-label">1982 SINCLAIR RESEARCH</span>
+            </div>
+            <div class="hud-right">
+              <span id="hud-fps" class="hud-badge">50 FPS</span>
+              <span class="hud-badge">3.5 MHz</span>
+            </div>
+          </div>
+
+          <div id="screen-wrapper" class="screen-wrapper scale-fit">
+            <canvas id="spectrum-screen" width="320" height="240"></canvas>
+            <div id="crt-overlay" class="crt-overlay"></div>
+          </div>
+
+          <!-- Console Quick Controls Toolbar -->
+          <div class="console-toolbar">
+            <div class="tool-group">
+              <button id="btn-play-pause" class="tool-btn" title="Pause / Resume CPU">
+                <span class="icon">⏸</span> Pause
+              </button>
+              <button id="btn-reset" class="tool-btn" title="Reset ZX Spectrum (Sinclair BASIC)">
+                <span class="icon">🔄</span> Reset
+              </button>
+              <button id="btn-nmi" class="tool-btn" title="Trigger NMI Interrupt">
+                <span class="icon">⚡</span> NMI
+              </button>
+            </div>
+
+            <div class="tool-group">
+              <div class="select-wrapper">
+                <label for="speed-select">Speed:</label>
+                <select id="speed-select" class="retro-select">
+                  <option value="0.5">0.5x (Slow)</option>
+                  <option value="1.0" selected>1.0x (3.5MHz)</option>
+                  <option value="2.0">2.0x (Turbo)</option>
+                  <option value="5.0">5.0x (Warp)</option>
+                </select>
+              </div>
+
+              <div class="select-wrapper">
+                <label for="scale-select">Display:</label>
+                <select id="scale-select" class="retro-select">
+                  <option value="fit" selected>Auto Fit</option>
+                  <option value="integer2x">Crisp 2x</option>
+                  <option value="integer3x">Crisp 3x</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="tool-group">
+              <button id="btn-crt-toggle" class="tool-btn active" title="Toggle CRT Scanlines Filter">
+                <span class="icon">📺</span> CRT
+              </button>
+              <button id="btn-mute" class="tool-btn" title="Mute/Unmute Audio">
+                🔊
+              </button>
+              <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.5" class="volume-slider" title="Beeper Volume">
+              <button id="btn-fullscreen" class="tool-btn" title="Fullscreen">
+                ⛶
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Snapshots / Quick Slots Bar -->
+        <div class="quick-slots-bar">
+          <div class="slot-buttons">
+            <span class="slot-title">Quick State Slots (F5 / F9):</span>
+            <div class="slot-item">
+              <button id="btn-save-slot-1" class="btn-slot save">Save 1</button>
+              <button id="btn-load-slot-1" class="btn-slot load">Load 1</button>
+              <span id="slot-info-1" class="slot-info">Empty</span>
+            </div>
+            <div class="slot-item">
+              <button id="btn-save-slot-2" class="btn-slot save">Save 2</button>
+              <button id="btn-load-slot-2" class="btn-slot load">Load 2</button>
+              <span id="slot-info-2" class="slot-info">Empty</span>
+            </div>
+            <div class="slot-item">
+              <button id="btn-save-slot-3" class="btn-slot save">Save 3</button>
+              <button id="btn-load-slot-3" class="btn-slot load">Load 3</button>
+              <span id="slot-info-3" class="slot-info">Empty</span>
+            </div>
+          </div>
+          <div class="slot-actions">
+            <button id="btn-download-sna" class="btn-export-sna" title="Download .SNA Snapshot">
+              💾 Export .SNA
+            </button>
+          </div>
+        </div>
+
+        <!-- Authentic Sinclair 48K Rubber Keyboard Deck -->
+        <div class="keyboard-chassis">
+          <div class="keyboard-header">
+            <div class="kb-title">SINCLAIR ZX SPECTRUM 48K KEYBOARD</div>
+            <div class="kb-hint">Click keys, touch, or use your physical keyboard. Backspace = DELETE, Arrows = Cursor.</div>
+          </div>
+
+          <div class="spectrum-keyboard-grid">
+            <!-- Row 1 (1 to 0) -->
+            <div class="kb-row">
+              <div class="rubber-key" data-key="1" data-row="0" data-bit="0">
+                <span class="k-sym red">EDIT</span>
+                <span class="k-ext green">DEF FN</span>
+                <span class="k-main">1</span>
+                <span class="k-word"></span>
+              </div>
+              <div class="rubber-key" data-key="2" data-row="0" data-bit="1">
+                <span class="k-sym red">CAPS LOCK</span>
+                <span class="k-ext green">FN</span>
+                <span class="k-main">2</span>
+                <span class="k-word"></span>
+              </div>
+              <div class="rubber-key" data-key="3" data-row="0" data-bit="2">
+                <span class="k-sym red">TRUE VID</span>
+                <span class="k-ext green">LINE</span>
+                <span class="k-main">3</span>
+                <span class="k-word"></span>
+              </div>
+              <div class="rubber-key" data-key="4" data-row="0" data-bit="3">
+                <span class="k-sym red">INV VID</span>
+                <span class="k-ext green">OPEN #</span>
+                <span class="k-main">4</span>
+                <span class="k-word"></span>
+              </div>
+              <div class="rubber-key" data-key="5" data-row="0" data-bit="4">
+                <span class="k-sym red">◀ LEFT</span>
+                <span class="k-ext green">CLOSE #</span>
+                <span class="k-main">5</span>
+                <span class="k-word"></span>
+              </div>
+              <div class="rubber-key" data-key="6" data-row="4" data-bit="4">
+                <span class="k-sym red">▼ DOWN</span>
+                <span class="k-ext green">MOVE</span>
+                <span class="k-main">6</span>
+                <span class="k-word"></span>
+              </div>
+              <div class="rubber-key" data-key="7" data-row="4" data-bit="3">
+                <span class="k-sym red">▲ UP</span>
+                <span class="k-ext green">ERASE</span>
+                <span class="k-main">7</span>
+                <span class="k-word"></span>
+              </div>
+              <div class="rubber-key" data-key="8" data-row="4" data-bit="2">
+                <span class="k-sym red">▶ RIGHT</span>
+                <span class="k-ext green">POINT</span>
+                <span class="k-main">8</span>
+                <span class="k-word"></span>
+              </div>
+              <div class="rubber-key" data-key="9" data-row="4" data-bit="1">
+                <span class="k-sym red">GRAPHICS</span>
+                <span class="k-ext green">CAT</span>
+                <span class="k-main">9</span>
+                <span class="k-word"></span>
+              </div>
+              <div class="rubber-key" data-key="0" data-row="4" data-bit="0">
+                <span class="k-sym red">DELETE</span>
+                <span class="k-ext green">FORMAT</span>
+                <span class="k-main">0</span>
+                <span class="k-word"></span>
+              </div>
+            </div>
+
+            <!-- Row 2 (Q to P) -->
+            <div class="kb-row">
+              <div class="rubber-key" data-key="q" data-row="1" data-bit="0">
+                <span class="k-sym red">&lt;=</span>
+                <span class="k-ext green">SIN</span>
+                <span class="k-main">Q</span>
+                <span class="k-word">PLOT</span>
+              </div>
+              <div class="rubber-key" data-key="w" data-row="1" data-bit="1">
+                <span class="k-sym red">&lt;&gt;</span>
+                <span class="k-ext green">COS</span>
+                <span class="k-main">W</span>
+                <span class="k-word">DRAW</span>
+              </div>
+              <div class="rubber-key" data-key="e" data-row="1" data-bit="2">
+                <span class="k-sym red">&gt;=</span>
+                <span class="k-ext green">TAN</span>
+                <span class="k-main">E</span>
+                <span class="k-word">REM</span>
+              </div>
+              <div class="rubber-key" data-key="r" data-row="1" data-bit="3">
+                <span class="k-sym red">&lt;</span>
+                <span class="k-ext green">INT</span>
+                <span class="k-main">R</span>
+                <span class="k-word">RUN</span>
+              </div>
+              <div class="rubber-key" data-key="t" data-row="1" data-bit="4">
+                <span class="k-sym red">&gt;</span>
+                <span class="k-ext green">RND</span>
+                <span class="k-main">T</span>
+                <span class="k-word">RAND</span>
+              </div>
+              <div class="rubber-key" data-key="y" data-row="5" data-bit="4">
+                <span class="k-sym red">AND</span>
+                <span class="k-ext green">STR$</span>
+                <span class="k-main">Y</span>
+                <span class="k-word">RETURN</span>
+              </div>
+              <div class="rubber-key" data-key="u" data-row="5" data-bit="3">
+                <span class="k-sym red">OR</span>
+                <span class="k-ext green">CHR$</span>
+                <span class="k-main">U</span>
+                <span class="k-word">IF</span>
+              </div>
+              <div class="rubber-key" data-key="i" data-row="5" data-bit="2">
+                <span class="k-sym red">AT</span>
+                <span class="k-ext green">CODE</span>
+                <span class="k-main">I</span>
+                <span class="k-word">INPUT</span>
+              </div>
+              <div class="rubber-key" data-key="o" data-row="5" data-bit="1">
+                <span class="k-sym red">;</span>
+                <span class="k-ext green">PEEK</span>
+                <span class="k-main">O</span>
+                <span class="k-word">POKE</span>
+              </div>
+              <div class="rubber-key" data-key="p" data-row="5" data-bit="0">
+                <span class="k-sym red">"</span>
+                <span class="k-ext green">TAB</span>
+                <span class="k-main">P</span>
+                <span class="k-word">PRINT</span>
+              </div>
+            </div>
+
+            <!-- Row 3 (A to ENTER) -->
+            <div class="kb-row">
+              <div class="rubber-key" data-key="a" data-row="2" data-bit="0">
+                <span class="k-sym red">STOP</span>
+                <span class="k-ext green">READ</span>
+                <span class="k-main">A</span>
+                <span class="k-word">NEW</span>
+              </div>
+              <div class="rubber-key" data-key="s" data-row="2" data-bit="1">
+                <span class="k-sym red">NOT</span>
+                <span class="k-ext green">RESTORE</span>
+                <span class="k-main">S</span>
+                <span class="k-word">SAVE</span>
+              </div>
+              <div class="rubber-key" data-key="d" data-row="2" data-bit="2">
+                <span class="k-sym red">STEP</span>
+                <span class="k-ext green">DATA</span>
+                <span class="k-main">D</span>
+                <span class="k-word">DIM</span>
+              </div>
+              <div class="rubber-key" data-key="f" data-row="2" data-bit="3">
+                <span class="k-sym red">TO</span>
+                <span class="k-ext green">SGN</span>
+                <span class="k-main">F</span>
+                <span class="k-word">FOR</span>
+              </div>
+              <div class="rubber-key" data-key="g" data-row="2" data-bit="4">
+                <span class="k-sym red">THEN</span>
+                <span class="k-ext green">ABS</span>
+                <span class="k-main">G</span>
+                <span class="k-word">GOTO</span>
+              </div>
+              <div class="rubber-key" data-key="h" data-row="6" data-bit="4">
+                <span class="k-sym red">^</span>
+                <span class="k-ext green">SQR</span>
+                <span class="k-main">H</span>
+                <span class="k-word">GOSUB</span>
+              </div>
+              <div class="rubber-key" data-key="j" data-row="6" data-bit="3">
+                <span class="k-sym red">-</span>
+                <span class="k-ext green">VAL</span>
+                <span class="k-main">J</span>
+                <span class="k-word">LOAD</span>
+              </div>
+              <div class="rubber-key" data-key="k" data-row="6" data-bit="2">
+                <span class="k-sym red">+</span>
+                <span class="k-ext green">LEN</span>
+                <span class="k-main">K</span>
+                <span class="k-word">LIST</span>
+              </div>
+              <div class="rubber-key" data-key="l" data-row="6" data-bit="1">
+                <span class="k-sym red">=</span>
+                <span class="k-ext green">USR</span>
+                <span class="k-main">L</span>
+                <span class="k-word">LET</span>
+              </div>
+              <div class="rubber-key key-enter" data-key="enter" data-row="6" data-bit="0">
+                <span class="k-sym red"></span>
+                <span class="k-ext green"></span>
+                <span class="k-main">ENTER</span>
+                <span class="k-word"></span>
+              </div>
+            </div>
+
+            <!-- Row 4 (CAPS SHIFT to SPACE) -->
+            <div class="kb-row">
+              <div class="rubber-key key-shift" data-key="caps_shift" data-row="3" data-bit="0">
+                <span class="k-sym red"></span>
+                <span class="k-ext green"></span>
+                <span class="k-main">CAPS SHIFT</span>
+                <span class="k-word"></span>
+              </div>
+              <div class="rubber-key" data-key="z" data-row="3" data-bit="1">
+                <span class="k-sym red">:</span>
+                <span class="k-ext green">LN</span>
+                <span class="k-main">Z</span>
+                <span class="k-word">COPY</span>
+              </div>
+              <div class="rubber-key" data-key="x" data-row="3" data-bit="2">
+                <span class="k-sym red">£</span>
+                <span class="k-ext green">EXP</span>
+                <span class="k-main">X</span>
+                <span class="k-word">CLEAR</span>
+              </div>
+              <div class="rubber-key" data-key="c" data-row="3" data-bit="3">
+                <span class="k-sym red">?</span>
+                <span class="k-ext green">LPRINT</span>
+                <span class="k-main">C</span>
+                <span class="k-word">CONT</span>
+              </div>
+              <div class="rubber-key" data-key="v" data-row="3" data-bit="4">
+                <span class="k-sym red">/</span>
+                <span class="k-ext green">LLIST</span>
+                <span class="k-main">V</span>
+                <span class="k-word">CLS</span>
+              </div>
+              <div class="rubber-key" data-key="b" data-row="7" data-bit="4">
+                <span class="k-sym red">*</span>
+                <span class="k-ext green">BIN</span>
+                <span class="k-main">B</span>
+                <span class="k-word">BORDER</span>
+              </div>
+              <div class="rubber-key" data-key="n" data-row="7" data-bit="3">
+                <span class="k-sym red">,</span>
+                <span class="k-ext green">INKEY$</span>
+                <span class="k-main">N</span>
+                <span class="k-word">NEXT</span>
+              </div>
+              <div class="rubber-key" data-key="m" data-row="7" data-bit="2">
+                <span class="k-sym red">.</span>
+                <span class="k-ext green">PI</span>
+                <span class="k-main">M</span>
+                <span class="k-word">PAUSE</span>
+              </div>
+              <div class="rubber-key key-shift" data-key="symbol_shift" data-row="7" data-bit="1">
+                <span class="k-sym red"></span>
+                <span class="k-ext green"></span>
+                <span class="k-main">SYMBOL SHIFT</span>
+                <span class="k-word"></span>
+              </div>
+              <div class="rubber-key key-space" data-key="space" data-row="7" data-bit="0">
+                <span class="k-sym red">BREAK</span>
+                <span class="k-ext green"></span>
+                <span class="k-main">SPACE</span>
+                <span class="k-word"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Touch / Gamepad Controls (Mobile & Quick Play) -->
+          <div class="touch-controls">
+            <div class="dpad-container">
+              <button id="dpad-up" class="dpad-btn up">▲</button>
+              <div class="dpad-middle">
+                <button id="dpad-left" class="dpad-btn left">◀</button>
+                <div class="dpad-center"></div>
+                <button id="dpad-right" class="dpad-btn right">▶</button>
+              </div>
+              <button id="dpad-down" class="dpad-btn down">▼</button>
+            </div>
+            <div class="fire-container">
+              <button id="btn-fire" class="fire-btn">FIRE</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Side Drawers -->
+    <div id="drawer-backdrop" class="drawer-backdrop"></div>
+
+    <!-- Drawer: Software Library -->
+    <aside id="drawer-games" class="drawer">
+      <div class="drawer-header">
+        <h2>🎮 Software Library</h2>
+        <button id="btn-close-games" class="btn-close">✕</button>
+      </div>
+      <div class="drawer-content">
+        <p class="drawer-intro">Select a classic Sinclair program to launch instantly into the 48K RAM:</p>
+        <div id="games-grid" class="games-grid">
+          <!-- Populated by games.js -->
+        </div>
+      </div>
+    </aside>
+
+    <!-- Drawer: Tape Deck & File Drop -->
+    <aside id="drawer-tape" class="drawer">
+      <div class="drawer-header">
+        <h2>📼 ZX Tape Deck & Files</h2>
+        <button id="btn-close-tape" class="btn-close">✕</button>
+      </div>
+      <div class="drawer-content">
+        <div id="drop-zone" class="drop-zone">
+          <div class="drop-icon">💾</div>
+          <h3>Drag & Drop Game Files Here</h3>
+          <p>Supports <strong>.SNA</strong>, <strong>.Z80</strong>, <strong>.TAP</strong>, and <strong>.SCR</strong> snapshots</p>
+          <label for="file-input" class="btn-file-select">Choose File...</label>
+          <input type="file" id="file-input" accept=".sna,.z80,.tap,.scr" style="display:none;">
+        </div>
+
+        <!-- Virtual Cassette Visualizer -->
+        <div class="cassette-deck">
+          <div class="cassette-body">
+            <div class="cassette-label">
+              <span id="tape-filename">Sinclair Tape Drive 1</span>
+              <span class="tape-badge">48K DATA</span>
+            </div>
+            <div class="cassette-spools">
+              <div class="spool left"><div class="spool-cog"></div></div>
+              <div class="spool-window"></div>
+              <div class="spool right"><div class="spool-cog"></div></div>
+            </div>
+          </div>
+          <div class="tape-controls-bar">
+            <button id="btn-tape-autoload" class="btn-tape-action primary">▶ Auto-Load / Play</button>
+            <button id="btn-tape-rewind" class="btn-tape-action">⏪ Rewind</button>
+          </div>
+          <div class="tape-blocks-container">
+            <div class="tape-blocks-header">
+              <h4>Tape Blocks:</h4>
+              <span id="tape-progress-badge" class="tape-badge">0 / 0</span>
+            </div>
+            <div id="tape-blocks-list" class="tape-blocks-list">
+              <div class="tape-empty-msg">No tape loaded. Drop a .TAP file above!</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Drawer: Live Z80 Debugger -->
+    <aside id="drawer-debugger" class="drawer drawer-large">
+      <div class="drawer-header">
+        <h2>⚙️ Z80 CPU Live Debugger</h2>
+        <button id="btn-close-debugger" class="btn-close">✕</button>
+      </div>
+      <div class="drawer-content">
+        <div class="dbg-grid">
+          <!-- Registers -->
+          <div class="dbg-card">
+            <h3>Registers (Hex)</h3>
+            <div class="reg-grid">
+              <div class="reg-item"><span class="reg-name">PC:</span> <span id="dbg-reg-pc" class="reg-val">0000</span></div>
+              <div class="reg-item"><span class="reg-name">SP:</span> <span id="dbg-reg-sp" class="reg-val">FFFF</span></div>
+              <div class="reg-item"><span class="reg-name">AF:</span> <span id="dbg-reg-af" class="reg-val">FFFF</span></div>
+              <div class="reg-item"><span class="reg-name">BC:</span> <span id="dbg-reg-bc" class="reg-val">FFFF</span></div>
+              <div class="reg-item"><span class="reg-name">DE:</span> <span id="dbg-reg-de" class="reg-val">FFFF</span></div>
+              <div class="reg-item"><span class="reg-name">HL:</span> <span id="dbg-reg-hl" class="reg-val">FFFF</span></div>
+              <div class="reg-item"><span class="reg-name">IX:</span> <span id="dbg-reg-ix" class="reg-val">FFFF</span></div>
+              <div class="reg-item"><span class="reg-name">IY:</span> <span id="dbg-reg-iy" class="reg-val">FFFF</span></div>
+              <div class="reg-item"><span class="reg-name">AF':</span> <span id="dbg-reg-af_" class="reg-val">FFFF</span></div>
+              <div class="reg-item"><span class="reg-name">BC':</span> <span id="dbg-reg-bc_" class="reg-val">FFFF</span></div>
+              <div class="reg-item"><span class="reg-name">DE':</span> <span id="dbg-reg-de_" class="reg-val">FFFF</span></div>
+              <div class="reg-item"><span class="reg-name">HL':</span> <span id="dbg-reg-hl_" class="reg-val">FFFF</span></div>
+              <div class="reg-item"><span class="reg-name">I:</span> <span id="dbg-reg-i" class="reg-val">00</span></div>
+              <div class="reg-item"><span class="reg-name">R:</span> <span id="dbg-reg-r" class="reg-val">00</span></div>
+              <div class="reg-item"><span class="reg-name">IM:</span> <span id="dbg-reg-im" class="reg-val">1</span></div>
+            </div>
+
+            <!-- Flags -->
+            <h4 style="margin-top: 12px; font-size: 11px; color: var(--color-cyan);">CPU Flags [S Z Y H X P/V N C]:</h4>
+            <div class="flags-bar">
+              <span id="dbg-flag-s" class="dbg-flag">0</span>
+              <span id="dbg-flag-z" class="dbg-flag">0</span>
+              <span id="dbg-flag-y" class="dbg-flag">0</span>
+              <span id="dbg-flag-h" class="dbg-flag">0</span>
+              <span id="dbg-flag-x" class="dbg-flag">0</span>
+              <span id="dbg-flag-pv" class="dbg-flag">0</span>
+              <span id="dbg-flag-n" class="dbg-flag">0</span>
+              <span id="dbg-flag-c" class="dbg-flag">0</span>
+            </div>
+          </div>
+
+          <!-- Disassembly -->
+          <div class="dbg-card">
+            <h3>Disassembly (At PC)</h3>
+            <div id="dbg-disassembly" class="disasm-box"></div>
+          </div>
+
+          <!-- Memory Hex Dump -->
+          <div class="dbg-card full-width">
+            <div class="dbg-card-header">
+              <h3>Memory Hex Inspector</h3>
+              <div class="mem-jump">
+                <label for="dbg-mem-addr">Address:</label>
+                <input type="text" id="dbg-mem-addr" value="0x4000" class="hex-input">
+              </div>
+            </div>
+            <div id="dbg-hexdump" class="hex-box"></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Drawer: BASIC Manual -->
+    <aside id="drawer-basic" class="drawer">
+      <div class="drawer-header">
+        <h2>📖 Sinclair BASIC Reference</h2>
+        <button id="btn-close-basic" class="btn-close">✕</button>
+      </div>
+      <div class="drawer-content">
+        <div class="manual-section">
+          <h3>Quick Commands</h3>
+          <ul class="manual-list">
+            <li><code>RUN</code> : Run the program in memory</li>
+            <li><code>LIST</code> : Display the BASIC program lines</li>
+            <li><code>CLS</code> : Clear the screen</li>
+            <li><code>BORDER n</code> : Set border color (0 to 7)</li>
+            <li><code>PAPER n</code> : Set background color (0 to 7)</li>
+            <li><code>INK n</code> : Set text color (0 to 7)</li>
+            <li><code>BEEP duration, pitch</code> : Play 1-bit sound</li>
+          </ul>
+        </div>
+
+        <div class="manual-section">
+          <h3>Spectrum Color Palette</h3>
+          <div class="palette-grid">
+            <div class="color-chip" style="background:#000; color:#fff;">0 Black</div>
+            <div class="color-chip" style="background:#0000d7; color:#fff;">1 Blue</div>
+            <div class="color-chip" style="background:#d70000; color:#fff;">2 Red</div>
+            <div class="color-chip" style="background:#d700d7; color:#fff;">3 Magenta</div>
+            <div class="color-chip" style="background:#00d700; color:#000;">4 Green</div>
+            <div class="color-chip" style="background:#00d7d7; color:#000;">5 Cyan</div>
+            <div class="color-chip" style="background:#d7d700; color:#000;">6 Yellow</div>
+            <div class="color-chip" style="background:#d7d7d7; color:#000;">7 White</div>
+          </div>
+        </div>
+
+        <div class="manual-section">
+          <h3>Example BASIC Program</h3>
+          <pre class="code-example">
+10 BORDER 0: PAPER 0: INK 6: CLS
+20 FOR X=0 TO 255 STEP 4
+30 PLOT X, 96 + 50*SIN(X/20)
+40 NEXT X
+50 BEEP 0.5, 10: RUN
+          </pre>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+  </div>
+
+  <script type="module" src="src/app.js?v=20260813_05"></script>
+</body>
+</html>
