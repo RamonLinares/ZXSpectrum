@@ -40,3 +40,6 @@ manic_miner.sna
 
 # Logs
 *.log
+
+# Experimental standalone recreation
+terracresta_js/
