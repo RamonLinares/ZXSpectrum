@@ -179,6 +179,7 @@ class SpectrumApp {
     if (tapeAutoLoadBtn) {
       tapeAutoLoadBtn.addEventListener('click', () => {
         if (this.currentTapeData) {
+          this.closeDrawers();
           this.spectrum.autoLoadTAP(this.currentTapeData, this.currentTapeFilename);
           this.showToast(`Auto-Loading ${this.currentTapeFilename}...`);
         } else {
@@ -304,6 +305,9 @@ class SpectrumApp {
       reader.onload = (e) => {
         const data = new Uint8Array(e.target.result);
         try {
+          // Automatically close any open drawer/sidebar to unblur screen
+          this.closeDrawers();
+
           if (filename.endsWith('.sna')) {
             this.spectrum.loadSNA(data);
             this.showToast(`Loaded SNA: ${file.name}`);
