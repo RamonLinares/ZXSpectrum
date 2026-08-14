@@ -1,4 +1,5 @@
 import { parseBitmap, PALETTE } from '../src/sprites.js';
+import { RAW_8X8_TILES, RAW_16X16_SPRITES, RAW_WAVE_SCRIPT } from '../src/extracted_data.js';
 import { Player } from '../src/player.js';
 import { EnemyManager } from '../src/enemies.js';
 import { Background } from '../src/background.js';
@@ -18,8 +19,14 @@ function assert(condition, message) {
 
 console.log('=== Testing Terra Cresta Native JavaScript Engine ===\n');
 
+// 0. Test Disassembled Binary Tables
+console.log('0. Testing Disassembled Z80 Machine Code Tables:');
+assert(RAW_8X8_TILES.length === 768, 'Extracted 768 exact 8x8 character and terrain tiles');
+assert(RAW_16X16_SPRITES.length >= 200, 'Extracted 203 exact 16x16 masked sprite structures');
+assert(RAW_WAVE_SCRIPT.length > 300, 'Extracted 304 bytes of authentic enemy wave spawn scripts');
+
 // 1. Test Sprite Parsing
-console.log('1. Testing Sprite Bitmaps:');
+console.log('\n1. Testing Sprite Bitmaps:');
 const sample = parseBitmap([
   "##  ",
   "  ##"

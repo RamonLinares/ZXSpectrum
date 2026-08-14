@@ -8,12 +8,52 @@ import {
   SPRITE_CAPSULE_CLOSED, SPRITE_CAPSULE_OPEN, SPRITE_ENEMY_SWOOP, SPRITE_ENEMY_SPINNER_1,
   SPRITE_ENEMY_SPINNER_2, SPRITE_GROUND_TURRET, SPRITE_BOSS_CORE, PALETTE
 } from './sprites.js';
+import { RAW_16X16_SPRITES, RAW_8X8_TILES } from './extracted_data.js';
 
 export class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d', { alpha: false });
     this.ctx.imageSmoothingEnabled = false;
+  }
+
+  // Draw authentic 16x16 masked sprite directly from disassembled Z80 binary memory
+  drawMaskedSprite(spriteObj, x, y, color) {
+    if (!spriteObj || !spriteObj.bytes) return;
+    const bytes = spriteObj.bytes;
+    const px = Math.floor(x);
+    const py = Math.floor(y);
+    const ctx = this.ctx;
+    ctx.fillStyle = color;
+
+    for (let line = 0; line < 16; line++) {
+      const d0 = bytes[line * 4 + 1];
+      const d1 = bytes[line * 4 + 3];
+      for (let b = 7; b >= 0; b--) {
+        if (d0 & (1 << b)) ctx.fillRect(px + (7 - b), py + line, 1, 1);
+      }
+      for (let b = 7; b >= 0; b--) {
+        if (d1 & (1 << b)) ctx.fillRect(px + 8 + (7 - b), py + line, 1, 1);
+      }
+    }
+  }
+
+  // Draw authentic 8x8 character or terrain tile directly from disassembled binary
+  drawTile8x8(tileBytes, x, y, color) {
+    if (!tileBytes) return;
+    const px = Math.floor(x);
+    const py = Math.floor(y);
+    const ctx = this.ctx;
+    ctx.fillStyle = color;
+
+    for (let r = 0; r < 8; r++) {
+      const b = tileBytes[r];
+      for (let bit = 7; bit >= 0; bit--) {
+        if (b & (1 << bit)) {
+          ctx.fillRect(px + (7 - bit), py + r, 1, 1);
+        }
+      }
+    }
   }
 
   // Draw a 2D boolean pixel matrix bitmap
