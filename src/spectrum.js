@@ -5,7 +5,7 @@
  */
 
 import { Z80 } from './z80.js';
-import { loadSpectrumROM, createMinimalBootROM } from './rom.js';
+import { loadSpectrumROM, createMinimalBootROM, SPECTRUM_BOOT_STATE } from './rom.js';
 import { SpectrumAudio } from './audio.js';
 import { SpectrumKeyboard } from './keyboard.js';
 
@@ -135,11 +135,20 @@ export class ZXSpectrum {
     this.keyWait = 0;
     this.keyHold = 0;
 
-    for (let i = 0x4000; i < 65536; i++) {
-      this.memory[i] = 0;
+    if (SPECTRUM_BOOT_STATE && SPECTRUM_BOOT_STATE.ram_b64) {
+      const binary = typeof atob === 'function' ? atob(SPECTRUM_BOOT_STATE.ram_b64) : Buffer.from(SPECTRUM_BOOT_STATE.ram_b64, 'base64').toString('binary');
+      for (let i = 0; i < 49152; i++) {
+        this.memory[0x4000 + i] = binary.charCodeAt(i);
+      }
+      Object.assign(this.cpu, SPECTRUM_BOOT_STATE.cpu);
+      this.borderColor = SPECTRUM_BOOT_STATE.border;
+    } else {
+      for (let i = 0x4000; i < 65536; i++) {
+        this.memory[i] = 0;
+      }
+      this.cpu.reset();
+      this.borderColor = 7;
     }
-    this.cpu.reset();
-    this.borderColor = 7;
 
     this.beeperState = 0;
     this.micState = 0;
